@@ -1,0 +1,5 @@
+
+# ignore the __pycache__ directory and compiled Python files
+# these are generated automatically and not needed in version control
+__pycache__/
+*.pyc
