@@ -1,8 +1,10 @@
 # "Which products have anomalous prices compared to their category average?"
 
+import logging
 import pandas as pd
 from models import PriceSnapshot
-import streamlit as st 
+
+logger = logging.getLogger(__name__)
 
 def detect_anomalies(snapshots: list[PriceSnapshot]) -> dict:
     df = pd.DataFrame([s.model_dump() for s in snapshots])
@@ -44,21 +46,53 @@ def detect_anomalies(snapshots: list[PriceSnapshot]) -> dict:
             max="max"
         ).round(2).to_dict(orient="index")
     }
+    logger.info(
+        "Analysis complete — %d products, %d anomalies (%.1f%%)",
+        report["total_products"],
+        report["anomalies_detected"],
+        report["anomaly_rate"],
+    )
     return report
-# USED WHEN GETTING DATA FROM REAL API.
 
+
+def health_check(report: dict, success_rate: float = 100.0) -> dict:
+    """Return pipeline health based on success_rate and anomaly_rate."""
+    anomaly_rate = report.get("anomaly_rate", 0.0)
+
+    if success_rate <= 80:
+        status = "critical"
+    elif anomaly_rate > 50:
+        status = "warning"
+    else:
+        status = "healthy"
+
+    result = {
+        "status": status,
+        "success_rate": success_rate,
+        "anomaly_rate": anomaly_rate,
+    }
+    logger.info("Health check — status: %s (success_rate=%.1f%%, anomaly_rate=%.1f%%)",
+                status, success_rate, anomaly_rate)
+    return result
+
+
+# USED WHEN GETTING DATA FROM REAL API.
 if __name__ == "__main__":
     import asyncio
-    from fetcher import fetch_and_validate, get_mock_snapshots
     import json
-    
-    # snapshots = asyncio.run(fetch_and_validate())
+    import streamlit as st
+    from fetcher import fetch_and_validate, get_mock_snapshots
+
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+
     try:
         snapshots = asyncio.run(fetch_and_validate())
+        success_rate = 100.0
     except Exception as e:
-        st.error(f"API unavailable: {e}")
-        st.info("Falling back to mock data...")
+        logger.error("API unavailable: %s — falling back to mock data", e)
         snapshots = get_mock_snapshots()
-    report = detect_anomalies(snapshots)
-    print(json.dumps(report, indent=2, default=str))
+        success_rate = 0.0
 
+    report = detect_anomalies(snapshots)
+    health = health_check(report, success_rate=success_rate)
+    logger.info(json.dumps({"report": report, "health": health}, indent=2, default=str))

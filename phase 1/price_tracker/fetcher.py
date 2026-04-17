@@ -1,8 +1,11 @@
 import httpx
 import asyncio
+import logging
 from datetime import datetime
 from models import Product, PriceSnapshot
 from pydantic import ValidationError
+
+logger = logging.getLogger(__name__)
 
 # use mock data when API is unavailable, or for testing purposes
 def get_mock_snapshots() -> list[PriceSnapshot]:
@@ -40,44 +43,56 @@ def get_mock_snapshots() -> list[PriceSnapshot]:
 BASE_URL = "https://fakestoreapi.com"
 
 async def fetch_all_products() -> list[dict]:
-    """Fetch all products from the API"""
-    async with httpx.AsyncClient() as client:
-        response = await client.get(f"{BASE_URL}/products", timeout=10)
-        response.raise_for_status()  # raises exception for 4xx/5xx
-        return response.json()
+    """Fetch all products from the API, retrying up to 3 times on failure."""
+    last_error = None
+    for attempt in range(1, 4):
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(f"{BASE_URL}/products", timeout=10)
+                response.raise_for_status()
+                return response.json()
+        except Exception as e:
+            last_error = e
+            logger.warning("Attempt %d/3 failed: %s", attempt, e)
+            if attempt < 3:
+                await asyncio.sleep(2)
+    logger.error("All 3 fetch attempts failed: %s", last_error)
+    raise last_error
 
 async def fetch_and_validate() -> list[PriceSnapshot]:
     """Fetch products and convert to validated PriceSnapshots"""
     raw_products = await fetch_all_products()
-    
+
     snapshots = []
     errors = []
-    
+
     for raw in raw_products:
         try:
-            product = Product(**raw) 
+            product = Product(**raw)
 
             snapshot = PriceSnapshot(
                 product_id=product.id,
                 title=product.title,
                 price=product.price,
-                category=product.category 
+                category=product.category
             )
             snapshots.append(snapshot)
-            
+
         except ValidationError as e:
             errors.append({
                 "product_id": raw.get("id"),
                 "errors": [err["msg"] for err in e.errors()]
             })
-    
-    print(f"Fetched: {len(raw_products)}")
-    print(f"Valid snapshots: {len(snapshots)}")
-    print(f"Errors: {len(errors)}")
-    
+
+    logger.info("Fetched: %d", len(raw_products))
+    logger.info("Valid snapshots: %d", len(snapshots))
+    if errors:
+        logger.error("Validation errors: %d", len(errors))
+
     return snapshots
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
     snapshots = asyncio.run(fetch_and_validate())
-    for s in snapshots[:3]:  # print first 3
-        print(s.model_dump())
+    for s in snapshots[:3]:
+        logger.info(s.model_dump())

@@ -1,9 +1,13 @@
+import logging
 import streamlit as st
 import plotly.express as px
 import asyncio
 import pandas as pd
 from fetcher import get_mock_snapshots
-from analyzer import detect_anomalies
+from analyzer import detect_anomalies, health_check
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+logger = logging.getLogger(__name__)
 
 st.set_page_config(
     page_title="Price Intelligence Pipeline",
@@ -16,19 +20,19 @@ st.markdown("""
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
 
 /* Scope Poppins to your content only — not Streamlit's UI chrome */
-.stMarkdown, .stDataFrame, h1, h2, h3, h4, p, 
-[data-testid="stMetricLabel"], 
+.stMarkdown, .stDataFrame, h1, h2, h3, h4, p,
+[data-testid="stMetricLabel"],
 [data-testid="stMetricValue"],
 .stPlotlyChart {
     font-family: 'Poppins', sans-serif !important;
 }
 
 /* Explicitly reset Streamlit's internal UI to system font */
-.stDeployButton, 
+.stDeployButton,
 [data-testid="stToolbar"],
 [data-testid="stDecoration"],
 .streamlit-wide,
-button, 
+button,
 .stSelectbox,
 header {
     font-family: -apple-system, BlinkMacSystemFont, sans-serif !important;
@@ -45,6 +49,35 @@ with st.spinner("Fetching and validating products..."):
     snapshots = get_mock_snapshots()
     report = detect_anomalies(snapshots)
     df = pd.DataFrame([s.model_dump() for s in snapshots])
+    logger.info("Dashboard loaded %d snapshots", len(snapshots))
+
+# --- Health Status Badge ---
+health = health_check(report)
+
+_badge_colors = {
+    "healthy":  {"bg": "#1a4731", "border": "#22c55e", "text": "#22c55e", "label": "● Healthy"},
+    "warning":  {"bg": "#422006", "border": "#f59e0b", "text": "#f59e0b", "label": "● Warning"},
+    "critical": {"bg": "#3b0a0a", "border": "#ef4444", "text": "#ef4444", "label": "● Critical"},
+}
+_c = _badge_colors[health["status"]]
+
+st.markdown(f"""
+<div style="
+    display: inline-block;
+    background-color: {_c['bg']};
+    border: 1px solid {_c['border']};
+    border-radius: 8px;
+    padding: 10px 20px;
+    margin-bottom: 16px;
+">
+    <span style="color: {_c['text']}; font-size: 1rem; font-weight: 600; font-family: Poppins, sans-serif;">
+        {_c['label']}
+    </span>
+    <span style="color: #aaa; font-size: 0.85rem; margin-left: 12px; font-family: Poppins, sans-serif;">
+        Success rate: {health['success_rate']:.0f}% &nbsp;|&nbsp; Anomaly rate: {health['anomaly_rate']:.1f}%
+    </span>
+</div>
+""", unsafe_allow_html=True)
 
 # --- Pipeline Summary ---
 
