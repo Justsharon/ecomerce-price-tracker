@@ -59,9 +59,9 @@ def health_check(report: dict, success_rate: float = 100.0) -> dict:
     """Return pipeline health based on success_rate and anomaly_rate."""
     anomaly_rate = report.get("anomaly_rate", 0.0)
 
-    if success_rate <= 80:
+    if success_rate <= 80 or anomaly_rate > 5:
         status = "critical"
-    elif anomaly_rate > 50:
+    elif anomaly_rate >= 2:
         status = "warning"
     else:
         status = "healthy"
@@ -76,7 +76,6 @@ def health_check(report: dict, success_rate: float = 100.0) -> dict:
     return result
 
 
-# USED WHEN GETTING DATA FROM REAL API.
 if __name__ == "__main__":
     import asyncio
     import json
