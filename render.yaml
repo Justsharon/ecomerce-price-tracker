@@ -1,6 +1,10 @@
+previews:
+  generation: automatic
+
 services:
   - type: web
     name: price-intelligence-pipeline
+    repo: https://github.com/Justsharon/ecomerce-price-tracker
     runtime: python
     buildCommand: pip install -r requirements.txt
     startCommand: streamlit run price_tracker/dashboard.py --server.port $PORT --server.address 0.0.0.0
