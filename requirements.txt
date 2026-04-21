@@ -3,3 +3,5 @@ plotly
 pandas
 pydantic
 httpx
+requests
+numpy
