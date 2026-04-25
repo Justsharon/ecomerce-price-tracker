@@ -1,7 +1,10 @@
 # E-Commerce Data Intelligence Pipeline
 
 ## Live Dashboard
+https://ecomerce-price-tracker.onrender.com/
+
 ![Price Intelligence Pipeline](dashboard-images/Price_Intelligence_Pipeline_page-0001.jpg)
+
 
 ## Overview
 I built a real-time price validation and anomaly detection pipeline. It fetches product data asynchronously from an e-commerce API, validates every record using Pydantic data contracts, and flags price anomalies using IQR-based detection. During development I discovered that Z-score detection fails on small, skewed price datasets due to the masking effect — so I switched to IQR which is robust to outliers. The live API has insufficient products per category to trigger anomalies, which I documented as a known limitation. The system correctly detects anomalies on controlled test data with sufficient sample sizes.
