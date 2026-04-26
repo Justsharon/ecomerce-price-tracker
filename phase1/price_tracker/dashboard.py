@@ -41,7 +41,7 @@ header {
 """, unsafe_allow_html=True)
 
 
-st.title("📊 Price Intelligence Pipeline")
+st.title("Price Intelligence Pipeline")
 st.caption("Real-time price validation and anomaly detection")
 
 # --- Load Data ---
@@ -55,9 +55,9 @@ with st.spinner("Fetching and validating products..."):
 health = health_check(report)
 
 _badge_colors = {
-    "healthy":  {"bg": "#1a4731", "border": "#22c55e", "text": "#22c55e", "label": "● Healthy"},
-    "warning":  {"bg": "#422006", "border": "#f59e0b", "text": "#f59e0b", "label": "● Warning"},
-    "critical": {"bg": "#3b0a0a", "border": "#ef4444", "text": "#ef4444", "label": "● Critical"},
+    "healthy":  {"bg": "#1a4731", "border": "#126430", "text": "#22c55e", "label": "Healthy"},
+    "warning":  {"bg": "#422006", "border": "#aa710e", "text": "#f59e0b", "label": "Warning"},
+    "critical": {"bg": "#3b0a0a", "border": "#ef4444", "text": "#c13333", "label": "Critical"},
 }
 _c = _badge_colors[health["status"]]
 
@@ -136,7 +136,7 @@ st.plotly_chart(fig, use_container_width=True)
 st.divider()
 
 # --- Anomalies Table ---
-st.subheader("🚨 Flagged Anomalies")
+st.subheader("Flagged Anomalies")
 if report["anomalies_detected"] > 0:
     anomaly_df = pd.DataFrame(report["anomalies"])
     st.dataframe(
